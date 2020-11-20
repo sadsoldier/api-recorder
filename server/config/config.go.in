@@ -1,0 +1,86 @@
+/*
+ * Copyright 2019 Oleg Borodin  <borodin@unix7.org>
+ */
+
+package appConfig
+
+import (
+    "io/ioutil"
+    "path/filepath"
+    "os"
+
+    "github.com/go-yaml/yaml"
+)
+
+type Config struct {
+    Foreground          bool    `yaml:"-"`
+    Debug               bool    `yaml:"debug"`
+    Devel               bool    `yaml:"-"`
+
+    ConfigPath          string  `yaml:"-"`
+    LibDir              string  `yaml:"-"`
+    PasswordPath        string  `yaml:"passwords"`
+    PidPath             string  `yaml:"pidfile"`
+    MessageLogPath      string  `yaml:"messagelog"`
+    AccessLogPath       string  `yaml:"accesslog"`
+    Port                int     `yaml:"port"`
+    StoreDir            string  `yaml:"storedir"`
+
+    User                string  `yaml:"user"`
+    Group               string  `yaml:"group"`
+    CertPath            string  `yaml:"cert"`
+    KeyPath             string  `yaml:"key"`
+
+    Target              string  `yaml:"target"`
+}
+
+func (this Config) Write() error {
+    fileName, _ := filepath.Abs(this.ConfigPath)
+    os.Rename(fileName, fileName + "~")
+
+    var data []byte
+    var err error
+    if data, err = yaml.Marshal(this); err != nil {
+        return err
+    }
+    return ioutil.WriteFile(fileName, data, 0640)
+}
+
+func (this *Config) Read() error {
+    fileName, _ := filepath.Abs(this.ConfigPath)
+
+    var data []byte
+    var err error
+    if data, err = ioutil.ReadFile(fileName); err != nil {
+        return err
+    }
+    return yaml.Unmarshal(data, &this)
+}
+
+func (this *Config) GetStoreDir() (string, error) {
+    return filepath.Abs(this.StoreDir)
+}
+
+func New() *Config {
+    return &Config{
+        Debug:          false,
+        Devel:          false,
+        Foreground:     false,
+
+        ConfigPath:     "@app_confdir@/@app_name@.yml",
+        LibDir:         "@app_libdir@",
+        PidPath:        "@app_rundir@/@app_name@.pid",
+        MessageLogPath: "@app_logdir@/message.log",
+        AccessLogPath:  "@app_logdir@/access.log",
+        Port:           @app_port@,
+        StoreDir:       "@app_databasedir@",
+
+        User:           "@app_user@",
+        Group:          "@app_group@",
+
+        CertPath:       "@app_confdir@/@app_name@.crt",
+        KeyPath:        "@app_confdir@/@app_name@.key",
+
+        Target:          "http://localhost:80",
+    }
+}
